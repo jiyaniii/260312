@@ -19,6 +19,17 @@ pip install -r requirements.txt
 python app.py
 ```
 
+## 커밋 시 자동 push + Vercel 배포
+
+`git commit` 후 자동으로 `git push`가 실행되게 하려면 (Vercel은 GitHub에 push 시 자동 배포):
+
+```bash
+# 최초 1회: 훅 설치
+cp scripts/post-commit .git/hooks/post-commit && chmod +x .git/hooks/post-commit
+```
+
+이후에는 `git commit`만 하면 자동으로 push 되고, Vercel이 연결된 경우 자동 배포됩니다.
+
 브라우저에서 **http://127.0.0.1:5050** 접속 후, (포트 변경: `PORT=8080 python app.py`)
 
 1. **엑셀 업로드**: Inventory, Suppliers 시트가 있는 엑셀을 올리거나  
