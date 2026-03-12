@@ -82,7 +82,7 @@ def logout():
 
 
 def _get_result_data():
-    token = request.session.get("result_token")
+    token = session.get("result_token")
     if not token:
         return None
     data = RESULT_STORE.get(token)
@@ -139,7 +139,7 @@ def upload():
             "store_name": request.form.get("store_name", "점포1"),
             "created_at": time.time(),
         }
-        request.session["result_token"] = token
+        session["result_token"] = token
 
         return redirect(url_for("result"))
     except Exception as e:
@@ -172,7 +172,7 @@ def use_sample():
             "store_name": "도미노피자 점포(샘플)",
             "created_at": time.time(),
         }
-        request.session["result_token"] = token
+        session["result_token"] = token
 
         return redirect(url_for("result"))
     except Exception as e:
@@ -210,7 +210,7 @@ def analyze_manual():
             "store_name": store_name,
             "created_at": time.time(),
         }
-        request.session["result_token"] = token
+        session["result_token"] = token
         return redirect(url_for("result"))
     except json.JSONDecodeError as e:
         flash(f"데이터 형식 오류: {str(e)}", "error")
