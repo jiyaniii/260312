@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>재고·발주 자동화</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f5f0;
+      --card: #fff;
+      --primary: #c41e3a;
+      --primary-dark: #9e1830;
+      --text: #1a1a1a;
+      --text-muted: #555;
+      --border: #e0e0dc;
+      --success: #2d7d46;
+      --error: #c41e3a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .container { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+    header p { margin: 0.25rem 0 0; opacity: 0.9; font-size: 0.9rem; }
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+    .btn {
+      display: inline-block;
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover { background: #d0d0cc; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #fafaf8; font-weight: 500; }
+    tr:hover { background: #fafaf8; }
+    .status-ok { color: var(--success); }
+    .status-warn { color: var(--error); font-weight: 500; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+    .summary-item { background: #fafaf8; padding: 1rem; border-radius: 8px; text-align: center; }
+    .summary-item .val { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    .summary-item .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .hidden { display: none !important; }
+    .msg { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
+    .msg.error { background: #ffebee; color: var(--error); }
+    .msg.success { background: #e8f5e9; color: var(--success); }
+    input[type="file"] { margin-top: 0.25rem; }
+    input[type="text"], input[type="number"] { padding: 0.4rem; border: 1px solid var(--border); border-radius: 6px; }
+    input[type="number"] { width: 4.5rem; }
+    .input-table input { width: 100%; min-width: 0; max-width: 120px; }
+    .input-table th { white-space: nowrap; }
+    .input-table .col-num { width: 5rem; }
+    .btn-small { padding: 0.35rem 0.6rem; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>도미노피자 재고·발주 자동화</h1>
+    <p>재고를 확인하고, 부족 시 발주서를 담당자 이메일로 보낼 수 있습니다. (HTML 단일 파일 실행)</p>
+  </header>
+  <div class="container">
+    <div id="msg" class="msg hidden"></div>
+
+    <div id="step1" class="card">
+      <h2>1. 데이터 입력</h2>
+      <div style="margin-bottom: 1rem;">
+        <label for="store_name" style="display: block; margin-bottom: 0.25rem; font-weight: 500;">점포명 (선택)</label>
+        <input type="text" id="store_name" placeholder="예: 강남점" value="도미노피자 점포" style="max-width: 280px;">
+      </div>
+
+      <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem;">방법 1: 화면에서 직접 입력</h3>
+      <p style="color: var(--text-muted); margin: 0 0 0.5rem;">기본 품목은 채워져 있습니다. <strong>현재재고</strong>만 입력한 뒤 「입력한 데이터로 분석」을 누르세요.</p>
+      <div style="overflow-x: auto; margin-bottom: 0.75rem;">
+        <table class="input-table">
+          <thead>
+            <tr>
+              <th>품목코드</th>
+              <th>재료명</th>
+              <th>규격</th>
+              <th>단위</th>
+              <th class="col-num">현재재고</th>
+              <th class="col-num">안전재고</th>
+              <th class="col-num">MOQ</th>
+              <th>거래처</th>
+              <th class="col-num">리드타임(일)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="manualTableBody"></tbody>
+        </table>
+      </div>
+      <p style="margin: 0 0 0.5rem;">
+        <button type="button" class="btn btn-secondary btn-small" id="btnAddRow">+ 행 추가</button>
+        <button type="button" class="btn btn-secondary btn-small" id="btnLoadSampleIntoTable" style="margin-left: 0.5rem;">샘플 데이터 불러오기</button>
+        <button type="button" class="btn btn-primary" id="btnAnalyzeManual" style="margin-left: 0.5rem;">입력한 데이터로 분석</button>
+      </p>
+
+      <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem;">방법 2: 엑셀 파일 업로드</h3>
+      <p style="color: var(--text-muted); margin: 0 0 0.5rem;">엑셀 파일을 선택하거나 샘플로 바로 분석할 수 있습니다.</p>
+      <div style="margin-bottom: 0.5rem;">
+        <input type="file" id="excel_file" accept=".xlsx,.xls">
+        <small style="color: var(--text-muted);">※ Inventory 시트가 포함된 엑셀만 지원합니다.</small>
+      </div>
+      <button type="button" class="btn btn-primary" id="btnUpload">업로드 후 분석</button>
+      <button type="button" class="btn btn-secondary" id="btnSample" style="margin-left: 0.5rem;">샘플 데이터로 분석하기</button>
+
+      <p style="margin: 1rem 0 0; color: var(--text-muted);">발주서 수신 이메일: <strong>songjy0727@gmail.com</strong></p>
+    </div>
+
+    <div id="step2" class="card hidden">
+      <h2>발주 요약 — <span id="storeName"></span></h2>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="val" id="totalItems">0</div>
+          <div class="label">총 품목 수</div>
+        </div>
+        <div class="summary-item">
+          <div class="val" id="needOrderCount">0</div>
+          <div class="label">발주 필요 품목 수</div>
+        </div>
+        <div class="summary-item">
+          <div class="val" id="totalQty">0</div>
+          <div class="label">전체 권장 발주 수량</div>
+        </div>
+      </div>
+      <p style="margin: 1rem 0 0;">
+        <button type="button" id="btnSendEmail" class="btn btn-primary hidden">발주서 이메일 보내기 (songjy0727@gmail.com)</button>
+        <span id="emailSendStatus" class="hidden" style="margin-left: 0.5rem;"></span>
+      </p>
+      <p id="noOrderMsg" class="hidden" style="margin: 1rem 0 0; color: var(--text-muted);">현재 재고가 충분하여 발주 필요 품목이 없습니다.</p>
+      <p style="margin: 0.75rem 0 0;">
+        <button type="button" class="btn btn-secondary" id="btnBack">다른 파일로 분석</button>
+      </p>
+    </div>
+
+    <div id="cardSupplier" class="card hidden">
+      <h2>거래처별 발주 내역</h2>
+      <div id="supplierList"></div>
+    </div>
+
+    <div id="cardTable" class="card hidden">
+      <h2>전체 재고 현황</h2>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>품목코드</th>
+              <th>재료명</th>
+              <th>규격</th>
+              <th>단위</th>
+              <th>현재재고</th>
+              <th>안전재고</th>
+              <th>MOQ</th>
+              <th>부족수량</th>
+              <th>발주권장</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const RECIPIENT_EMAIL = 'songjy0727@gmail.com';
+
+    const SAMPLE_INVENTORY = [
+      { "품목코드": "ING001", "재료명": "도우볼", "규격": "220g", "단위": "개", "현재재고": 120, "안전재고": 180, "MOQ": 100, "거래처": "도미노푸드서플라이", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 2 },
+      { "품목코드": "ING002", "재료명": "토마토소스", "규격": "3kg", "단위": "팩", "현재재고": 32, "안전재고": 20, "MOQ": 10, "거래처": "도미노푸드서플라이", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 2 },
+      { "품목코드": "ING003", "재료명": "모짜렐라치즈", "규격": "2kg", "단위": "봉", "현재재고": 12, "안전재고": 18, "MOQ": 10, "거래처": "도미노푸드서플라이", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 2 },
+      { "품목코드": "ING004", "재료명": "페퍼로니", "규격": "1kg", "단위": "팩", "현재재고": 15, "안전재고": 12, "MOQ": 8, "거래처": "프레시미트코리아", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 3 },
+      { "품목코드": "ING005", "재료명": "베이컨", "규격": "1kg", "단위": "팩", "현재재고": 6, "안전재고": 10, "MOQ": 10, "거래처": "프레시미트코리아", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 3 },
+      { "품목코드": "ING006", "재료명": "양파", "규격": "5kg", "단위": "봉", "현재재고": 14, "안전재고": 12, "MOQ": 6, "거래처": "그린베지유통", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 1 },
+      { "품목코드": "ING007", "재료명": "피망", "규격": "5kg", "단위": "봉", "현재재고": 5, "안전재고": 8, "MOQ": 5, "거래처": "그린베지유통", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 1 },
+      { "품목코드": "ING008", "재료명": "양송이버섯", "규격": "2.5kg", "단위": "캔", "현재재고": 3, "안전재고": 6, "MOQ": 6, "거래처": "그린베지유통", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 1 },
+      { "품목코드": "ING009", "재료명": "블랙올리브", "규격": "3kg", "단위": "캔", "현재재고": 9, "안전재고": 8, "MOQ": 4, "거래처": "토핑솔루션", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 2 },
+      { "품목코드": "ING010", "재료명": "스위트콘", "규격": "3kg", "단위": "캔", "현재재고": 4, "안전재고": 5, "MOQ": 6, "거래처": "토핑솔루션", "거래처이메일": "jysong@chonf.co.kr", "리드타임(일)": 2 }
+    ];
+
+    function showMsg(text, type) {
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = 'msg ' + (type || '');
+      el.classList.remove('hidden');
+    }
+    function hideMsg() {
+      document.getElementById('msg').classList.add('hidden');
+    }
+
+    function analyzeInventory(rows) {
+      return rows.map(r => {
+        const 현재재고 = Number(r['현재재고']) || 0;
+        const 안전재고 = Number(r['안전재고']) || 0;
+        const MOQ = Number(r['MOQ']) || 0;
+        const 부족수량 = Math.max(0, 안전재고 - 현재재고);
+        const 발주권장수량 = 부족수량 > 0 ? Math.max(MOQ, 부족수량) : 0;
+        const 상태 = 현재재고 < 안전재고 ? '발주 필요' : '정상';
+        const 단위 = r['단위'] || '';
+        const 담당자알림메시지 = 상태 === '발주 필요'
+          ? `${r['재료명']} 재고 부족 - 현재 ${현재재고}${단위}, 안전재고 ${안전재고}${단위}, 권장발주 ${발주권장수량}${단위}`
+          : null;
+        return { ...r, 부족수량, 발주권장수량, 상태, 담당자알림메시지 };
+      });
+    }
+
+    function getOrdersBySupplier(analyzed) {
+      const need = analyzed.filter(r => r.상태 === '발주 필요');
+      const map = {};
+      need.forEach(r => {
+        const name = r.거래처;
+        if (!map[name]) {
+          map[name] = { 거래처명: name, 리드타임_일: r['리드타임(일)'] || 0, 품목_목록: [] };
+        }
+        map[name].품목_목록.push({
+          재료명: r.재료명,
+          규격: r.규격,
+          단위: r.단위,
+          발주권장수량: r.발주권장수량
+        });
+        map[name].총_권장_발주_수량 = (map[name].총_권장_발주_수량 || 0) + r.발주권장수량;
+      });
+      return Object.values(map).map(s => ({
+        ...s,
+        발주_필요_품목_수: s.품목_목록.length
+      }));
+    }
+
+    function renderResult(analyzed, storeName) {
+      const needCount = analyzed.filter(r => r.상태 === '발주 필요').length;
+      const totalQty = analyzed.filter(r => r.상태 === '발주 필요').reduce((s, r) => s + r.발주권장수량, 0);
+      const bySupplier = getOrdersBySupplier(analyzed);
+
+      document.getElementById('storeName').textContent = storeName || '점포';
+      document.getElementById('totalItems').textContent = analyzed.length;
+      document.getElementById('needOrderCount').textContent = needCount;
+      document.getElementById('totalQty').textContent = totalQty;
+
+      const btnEmail = document.getElementById('btnSendEmail');
+      const noOrderMsg = document.getElementById('noOrderMsg');
+      if (bySupplier.length > 0) {
+        btnEmail.classList.remove('hidden');
+        noOrderMsg.classList.add('hidden');
+        window._lastOrderData = { store_name: storeName, orders_by_supplier: bySupplier };
+        const date = new Date().toISOString().slice(0, 10);
+        let body = `안녕하세요.\n\n도미노피자 ${storeName} 재고·발주 자동화입니다.\n아래 품목에 대해 발주 요청드립니다.\n\n`;
+        bySupplier.forEach(s => {
+          body += `【${s.거래처명}】 (리드타임 ${s.리드타임_일}일)\n`;
+          s.품목_목록.forEach(i => body += `- ${i.재료명} (${i.규격}) ${i.발주권장수량}${i.단위}\n`);
+          body += '\n';
+        });
+        body += '확인 부탁드립니다. 감사합니다.';
+        const subject = `[발주요청] ${storeName} / 재고자동화 / ${date}`;
+        window._mailtoHref = `mailto:${RECIPIENT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      } else {
+        btnEmail.classList.add('hidden');
+        noOrderMsg.classList.remove('hidden');
+      }
+
+      const supplierList = document.getElementById('supplierList');
+      supplierList.innerHTML = '';
+      bySupplier.forEach(s => {
+        const div = document.createElement('div');
+        div.style.marginBottom = '1.5rem';
+        let table = `<h3 style="margin:0 0 0.5rem; font-size:1rem;">${s.거래처명} (리드타임 ${s.리드타임_일}일)</h3><table><thead><tr><th>재료명</th><th>규격</th><th>단위</th><th>발주 권장 수량</th></tr></thead><tbody>`;
+        s.품목_목록.forEach(i => {
+          table += `<tr><td>${i.재료명}</td><td>${i.규격}</td><td>${i.단위}</td><td>${i.발주권장수량}</td></tr>`;
+        });
+        table += '</tbody></table>';
+        div.innerHTML = table;
+        supplierList.appendChild(div);
+      });
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = analyzed.map(r => `
+        <tr>
+          <td>${r.품목코드 || ''}</td>
+          <td>${r.재료명 || ''}</td>
+          <td>${r.규격 || ''}</td>
+          <td>${r.단위 || ''}</td>
+          <td>${r.현재재고}</td>
+          <td>${r.안전재고}</td>
+          <td>${r.MOQ}</td>
+          <td>${r.부족수량}</td>
+          <td>${r.발주권장수량}</td>
+          <td class="${r.상태 === '발주 필요' ? 'status-warn' : 'status-ok'}">${r.상태}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('step1').classList.add('hidden');
+      document.getElementById('step2').classList.remove('hidden');
+      document.getElementById('cardSupplier').classList.toggle('hidden', bySupplier.length === 0);
+      document.getElementById('cardTable').classList.remove('hidden');
+    }
+
+    document.getElementById('btnSendEmail').onclick = function() {
+      var statusEl = document.getElementById('emailSendStatus');
+      statusEl.classList.remove('hidden');
+      statusEl.className = 'hidden';
+      statusEl.textContent = '';
+      var base = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:5050' : '';
+      var apiUrl = base + '/api/send_order_email';
+      if (!window._lastOrderData) {
+        statusEl.textContent = '발주 데이터가 없습니다.';
+        statusEl.classList.remove('hidden');
+        statusEl.style.color = 'var(--error)';
+        return;
+      }
+      statusEl.textContent = '발송 중…';
+      statusEl.style.color = 'var(--text-muted)';
+      statusEl.classList.remove('hidden');
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(window._lastOrderData)
+      }).then(function(r) { return r.json().then(function(data) { return { status: r.status, data: data }; }); })
+        .then(function(res) {
+          if (res.data.ok) {
+            statusEl.textContent = '이메일이 발송되었습니다.';
+            statusEl.style.color = 'var(--success)';
+          } else {
+            statusEl.textContent = '실패: ' + (res.data.message || res.data);
+            statusEl.style.color = 'var(--error)';
+          }
+        })
+        .catch(function() {
+          statusEl.textContent = '서버에 연결할 수 없습니다. 터미널에서 python app.py 실행 후 이 페이지를 http://localhost:5050/standalone 에서 열어 주세요.';
+          statusEl.style.color = 'var(--error)';
+        });
+    };
+
+    function runWithData(inventoryRows, storeName) {
+      hideMsg();
+      const analyzed = analyzeInventory(inventoryRows);
+      renderResult(analyzed, storeName);
+    }
+
+    const MANUAL_KEYS = ['품목코드', '재료명', '규격', '단위', '현재재고', '안전재고', 'MOQ', '거래처', '리드타임(일)'];
+    function addManualRow(data) {
+      const tbody = document.getElementById('manualTableBody');
+      const tr = document.createElement('tr');
+      const vals = data || {};
+      MANUAL_KEYS.forEach(k => {
+        const td = document.createElement('td');
+        const isNum = ['현재재고', '안전재고', 'MOQ', '리드타임(일)'].includes(k);
+        const input = document.createElement('input');
+        input.type = isNum ? 'number' : 'text';
+        input.min = isNum ? 0 : undefined;
+        input.dataset.key = k;
+        input.value = vals[k] !== undefined && vals[k] !== null ? String(vals[k]) : '';
+        if (k === '리드타임(일)') input.placeholder = '1';
+        td.appendChild(input);
+        tr.appendChild(td);
+      });
+      const tdDel = document.createElement('td');
+      const btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.className = 'btn btn-secondary btn-small';
+      btnDel.textContent = '삭제';
+      btnDel.onclick = function() { tr.remove(); };
+      tdDel.appendChild(btnDel);
+      tr.appendChild(tdDel);
+      tbody.appendChild(tr);
+    }
+    function getManualTableData() {
+      const tbody = document.getElementById('manualTableBody');
+      const rows = [];
+      const missingCurrent = [];
+      tbody.querySelectorAll('tr').forEach(tr => {
+        const inputs = tr.querySelectorAll('input[data-key]');
+        const row = {};
+        inputs.forEach(inp => {
+          const k = inp.dataset.key;
+          const isNum = inp.type === 'number';
+          const raw = inp.value.trim();
+          if (k === '현재재고') {
+            row[k] = raw === '' ? null : (isNum ? Number(inp.value) : inp.value);
+          } else {
+            row[k] = isNum ? (raw === '' ? 0 : Number(inp.value)) : raw;
+          }
+        });
+        row['거래처이메일'] = RECIPIENT_EMAIL;
+        const hasName = row['재료명'] !== '';
+        if (!hasName) return;
+        if (row['현재재고'] === null || row['현재재고'] === '' || (typeof row['현재재고'] === 'number' && isNaN(row['현재재고']))) {
+          missingCurrent.push(row['재료명']);
+          return;
+        }
+        row['현재재고'] = Number(row['현재재고']) || 0;
+        if (row['현재재고'] < 0) row['현재재고'] = 0;
+        rows.push(row);
+      });
+      return { rows, missingCurrent };
+    }
+    document.getElementById('btnAddRow').onclick = function() { addManualRow(); };
+    document.getElementById('btnLoadSampleIntoTable').onclick = function() {
+      const tbody = document.getElementById('manualTableBody');
+      tbody.innerHTML = '';
+      SAMPLE_INVENTORY.forEach(r => addManualRow({ ...r, 현재재고: '' }));
+    };
+    document.getElementById('btnAnalyzeManual').onclick = function() {
+      const { rows, missingCurrent } = getManualTableData();
+      if (missingCurrent.length > 0) {
+        showMsg('다음 품목의 현재재고를 입력해 주세요: ' + missingCurrent.join(', '), 'error');
+        return;
+      }
+      if (rows.length === 0) {
+        showMsg('최소 1개 품목을 입력해 주세요.', 'error');
+        return;
+      }
+      runWithData(rows, document.getElementById('store_name').value.trim() || '점포');
+    };
+
+    document.getElementById('btnSample').onclick = function() {
+      runWithData(SAMPLE_INVENTORY, document.getElementById('store_name').value.trim() || '도미노피자 점포(샘플)');
+    };
+
+    // 페이지 로드 시 기본 품목(10개)만 채우고, 현재재고 칸은 비움
+    document.getElementById('manualTableBody').innerHTML = '';
+    SAMPLE_INVENTORY.forEach(function(r) { addManualRow({ ...r, 현재재고: '' }); });
+
+    document.getElementById('btnUpload').onclick = function() {
+      const fileInput = document.getElementById('excel_file');
+      if (!fileInput.files || !fileInput.files[0]) {
+        showMsg('파일을 선택해 주세요.', 'error');
+        return;
+      }
+      const file = fileInput.files[0];
+      if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        showMsg('엑셀 파일(.xlsx, .xls)만 선택해 주세요.', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'binary' });
+          const sheetNames = wb.SheetNames;
+          const invSheet = sheetNames.find(s => s === 'Inventory');
+          if (!invSheet) {
+            showMsg('이 엑셀에 "Inventory" 시트가 없습니다.', 'error');
+            return;
+          }
+          const ws = wb.Sheets[invSheet];
+          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          if (!rows.length) {
+            showMsg('Inventory 시트에 데이터가 없습니다.', 'error');
+            return;
+          }
+          runWithData(rows, document.getElementById('store_name').value.trim() || '점포1');
+        } catch (err) {
+          showMsg('파일 처리 중 오류: ' + err.message, 'error');
+        }
+      };
+      reader.readAsBinaryString(file);
+    };
+
+    document.getElementById('btnBack').onclick = function() {
+      document.getElementById('step1').classList.remove('hidden');
+      document.getElementById('step2').classList.add('hidden');
+      document.getElementById('cardSupplier').classList.add('hidden');
+      document.getElementById('cardTable').classList.add('hidden');
+      document.getElementById('excel_file').value = '';
+      hideMsg();
+    };
+  </script>
+</body>
+</html>
