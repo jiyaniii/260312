@@ -82,12 +82,36 @@
         KEYS.forEach(function(k) {
           var td = document.createElement('td');
           var input = document.createElement('input');
+          var isCurrent = (k === '현재재고');
           input.type = ['현재재고','안전재고','MOQ','리드타임(일)'].indexOf(k) >= 0 ? 'number' : 'text';
           input.name = 'inv_' + k;
           input.setAttribute('data-key', k);
           if (input.type === 'number') input.min = 0;
           input.value = (data[k] !== undefined && data[k] !== null) ? String(data[k]) : '';
           input.style.cssText = 'padding:0.4rem; width:100%; max-width:120px; border:1px solid var(--border); border-radius:6px;';
+          if (!isCurrent) {
+            input.readOnly = true;
+            input.style.background = '#f0f0f0';
+            input.style.cursor = 'default';
+          } else {
+            input.addEventListener('keydown', function(e) {
+              if (e.key !== 'Tab') return;
+              e.preventDefault();
+              if (e.shiftKey) {
+                var prevTr = tr.previousElementSibling;
+                if (prevTr) {
+                  var prevInp = prevTr.querySelector('input[data-key="현재재고"]');
+                  if (prevInp) prevInp.focus();
+                }
+              } else {
+                var nextTr = tr.nextElementSibling;
+                if (nextTr) {
+                  var nextInp = nextTr.querySelector('input[data-key="현재재고"]');
+                  if (nextInp) nextInp.focus();
+                }
+              }
+            });
+          }
           td.appendChild(input);
           tr.appendChild(td);
         });
@@ -103,7 +127,6 @@
       }
       function getTableData() {
         var rows = [];
-        var missingCurrent = [];
         document.querySelectorAll('#manualTableBody tr').forEach(function(tr) {
           var row = {};
           tr.querySelectorAll('input[data-key]').forEach(function(inp) {
@@ -116,14 +139,11 @@
             }
           });
           if (row['재료명'] === '') return;
-          if (row['현재재고'] === null || row['현재재고'] === '' || isNaN(row['현재재고'])) {
-            missingCurrent.push(row['재료명']);
-            return;
-          }
+          if (row['현재재고'] === null || row['현재재고'] === '' || isNaN(row['현재재고'])) return;
           row['현재재고'] = parseInt(row['현재재고'], 10) >= 0 ? row['현재재고'] : 0;
           rows.push(row);
         });
-        return { rows: rows, missingCurrent: missingCurrent };
+        return { rows: rows };
       }
       document.getElementById('btnAddRow').onclick = function() { addRow(); };
       document.getElementById('btnLoadSampleIntoTable').onclick = function() {
@@ -132,12 +152,8 @@
       };
       document.getElementById('formManual').onsubmit = function() {
         var result = getTableData();
-        if (result.missingCurrent.length > 0) {
-          alert('다음 품목의 현재재고를 입력해 주세요: ' + result.missingCurrent.join(', '));
-          return false;
-        }
         if (result.rows.length === 0) {
-          alert('최소 1개 품목을 입력해 주세요.');
+          alert('분석할 품목이 없습니다. 현재재고를 입력한 품목만 분석됩니다.');
           return false;
         }
         document.getElementById('inventory_json').value = JSON.stringify(result.rows);

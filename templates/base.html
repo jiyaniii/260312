@@ -35,7 +35,7 @@
       padding: 1.5rem;
     }
     header {
-      background: var(--dominos-black);
+      background: var(--dominos-red);
       color: #fff;
       padding: 1rem 1.5rem;
       margin-bottom: 1.5rem;
@@ -44,18 +44,26 @@
       gap: 1rem;
       flex-wrap: wrap;
     }
-    header .logo { height: 40px; width: auto; display: block; }
+    header .logo-wrap {
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+    }
+    header .logo { height: 44px; width: auto; display: block; }
     header .header-text { flex: 1; min-width: 0; }
     header h1 { margin: 0; font-size: 1.15rem; font-weight: 700; color: #fff; }
-    header p { margin: 0.25rem 0 0; opacity: 0.9; font-size: 0.875rem; color: rgba(255,255,255,0.9); }
+    header p { margin: 0.25rem 0 0; opacity: 0.95; font-size: 0.875rem; color: rgba(255,255,255,0.95); }
     .card {
       background: var(--card);
       border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      box-shadow: 0 2px 12px rgba(227,24,55,0.08);
       padding: 1.5rem;
       margin-bottom: 1.5rem;
+      border-top: 3px solid var(--dominos-blue);
     }
-    .card h2 { margin: 0 0 1rem; font-size: 1.1rem; color: var(--text); }
+    .card h2 { margin: 0 0 1rem; font-size: 1.1rem; color: var(--dominos-blue); font-weight: 700; }
     .flash { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
     .flash.success { background: #e8f5e9; color: var(--success); }
     .flash.error { background: #ffebee; color: var(--error); }
@@ -73,18 +81,18 @@
     }
     .btn-primary { background: var(--dominos-red); color: #fff; }
     .btn-primary:hover { background: var(--primary-dark); }
-    .btn-secondary { background: #e8e8e8; color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: #d0d0cc; }
+    .btn-secondary { background: #fff; color: var(--dominos-blue); border: 2px solid var(--dominos-blue); }
+    .btn-secondary:hover { background: rgba(0,100,145,0.08); }
     .btn-small { padding: 0.35rem 0.6rem; font-size: 0.85rem; }
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .input-table input { width: 100%; max-width: 120px; padding: 0.4rem; border: 1px solid var(--border); border-radius: 6px; }
     th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { background: #fafaf8; font-weight: 500; }
+    th { background: rgba(0,100,145,0.06); color: var(--dominos-blue); font-weight: 600; }
     tr:hover { background: #fafaf8; }
     .status-ok { color: var(--success); }
     .status-warn { color: var(--error); font-weight: 500; }
     .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
-    .summary-item { background: #fafaf8; padding: 1rem; border-radius: 8px; text-align: center; }
+    .summary-item { background: rgba(0,100,145,0.06); padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid rgba(0,100,145,0.15); }
     .summary-item .val { font-size: 1.5rem; font-weight: 700; color: var(--dominos-red); }
     .summary-item .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
   </style>
@@ -92,7 +100,9 @@
 </head>
 <body>
   <header>
-    <img src="{{ url_for('static', filename='dominos-logo.png') }}" alt="Domino's" class="logo">
+    <div class="logo-wrap">
+      <img src="{{ url_for('static', filename='dominos-logo.png') }}" alt="Domino's" class="logo">
+    </div>
     <div class="header-text">
       <h1>재고·발주 자동화</h1>
       <p>재고를 확인하고, 부족 시 발주서를 담당자 이메일로 발송합니다.</p>

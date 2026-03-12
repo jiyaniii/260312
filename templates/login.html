@@ -20,11 +20,18 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; }
-    .login-logo { height: 48px; margin-bottom: 1rem; }
+    .login-logo-wrap {
+      background: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(227,24,55,0.15);
+    }
+    .login-logo { height: 52px; width: auto; display: block; }
     .card {
       background: var(--card);
       border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 12px rgba(227,24,55,0.1);
       padding: 2rem;
       width: 100%;
       max-width: 360px;
@@ -47,7 +54,9 @@
   </style>
 </head>
 <body>
-  <img src="{{ url_for('static', filename='dominos-logo.png') }}" alt="Domino's" class="login-logo">
+  <div class="login-logo-wrap">
+    <img src="{{ url_for('static', filename='dominos-logo.png') }}" alt="Domino's" class="login-logo">
+  </div>
   <div class="card">
     <h1>팀 프로젝트 비밀번호</h1>
     <p>접속하려면 비밀번호를 입력하세요.</p>

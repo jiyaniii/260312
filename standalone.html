@@ -26,7 +26,7 @@
     body { margin: 0; font-family: 'Noto Sans KR', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
     .container { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
     header {
-      background: var(--dominos-black);
+      background: var(--dominos-red);
       color: #fff;
       padding: 1rem 1.5rem;
       margin-bottom: 1.5rem;
@@ -35,18 +35,26 @@
       gap: 1rem;
       flex-wrap: wrap;
     }
-    header .logo { height: 40px; width: auto; display: block; }
+    header .logo-wrap {
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+    }
+    header .logo { height: 44px; width: auto; display: block; }
     header .header-text { flex: 1; min-width: 0; }
     header h1 { margin: 0; font-size: 1.15rem; font-weight: 700; color: #fff; }
-    header p { margin: 0.25rem 0 0; opacity: 0.9; font-size: 0.875rem; color: rgba(255,255,255,0.9); }
+    header p { margin: 0.25rem 0 0; opacity: 0.95; font-size: 0.875rem; color: rgba(255,255,255,0.95); }
     .card {
       background: var(--card);
       border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      box-shadow: 0 2px 12px rgba(227,24,55,0.08);
       padding: 1.5rem;
       margin-bottom: 1.5rem;
+      border-top: 3px solid var(--dominos-blue);
     }
-    .card h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+    .card h2 { margin: 0 0 1rem; font-size: 1.1rem; color: var(--dominos-blue); font-weight: 700; }
     .btn {
       display: inline-block;
       padding: 0.6rem 1.2rem;
@@ -60,15 +68,15 @@
     }
     .btn-primary { background: var(--dominos-red); color: #fff; }
     .btn-primary:hover { background: var(--primary-dark); }
-    .btn-secondary { background: #e8e8e8; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary { background: #fff; color: var(--dominos-blue); border: 2px solid var(--dominos-blue); }
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { background: #fafaf8; font-weight: 500; }
+    th { background: rgba(0,100,145,0.06); color: var(--dominos-blue); font-weight: 600; }
     tr:hover { background: #fafaf8; }
     .status-ok { color: var(--success); }
     .status-warn { color: var(--error); font-weight: 500; }
     .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
-    .summary-item { background: #fafaf8; padding: 1rem; border-radius: 8px; text-align: center; }
+    .summary-item { background: rgba(0,100,145,0.06); padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid rgba(0,100,145,0.15); }
     .summary-item .val { font-size: 1.5rem; font-weight: 700; color: var(--dominos-red); }
     .summary-item .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
     .hidden { display: none !important; }
@@ -86,7 +94,9 @@
 </head>
 <body>
   <header>
-    <img src="/static/dominos-logo.png" alt="Domino's" class="logo" onerror="this.style.display='none'">
+    <div class="logo-wrap">
+      <img src="/static/dominos-logo.png" alt="Domino's" class="logo" onerror="this.parentElement.style.display='none'">
+    </div>
     <div class="header-text">
       <h1>재고·발주 자동화</h1>
       <p>재고를 확인하고, 부족 시 발주서를 담당자 이메일로 보낼 수 있습니다. (HTML 단일 파일 실행)</p>
@@ -377,6 +387,7 @@
       const vals = data || {};
       MANUAL_KEYS.forEach(k => {
         const td = document.createElement('td');
+        const isCurrent = (k === '현재재고');
         const isNum = ['현재재고', '안전재고', 'MOQ', '리드타임(일)'].includes(k);
         const input = document.createElement('input');
         input.type = isNum ? 'number' : 'text';
@@ -384,6 +395,29 @@
         input.dataset.key = k;
         input.value = vals[k] !== undefined && vals[k] !== null ? String(vals[k]) : '';
         if (k === '리드타임(일)') input.placeholder = '1';
+        if (!isCurrent) {
+          input.readOnly = true;
+          input.style.background = '#f0f0f0';
+          input.style.cursor = 'default';
+        } else {
+          input.addEventListener('keydown', function(e) {
+            if (e.key !== 'Tab') return;
+            e.preventDefault();
+            if (e.shiftKey) {
+              const prevTr = tr.previousElementSibling;
+              if (prevTr) {
+                const prevInp = prevTr.querySelector('input[data-key="현재재고"]');
+                if (prevInp) prevInp.focus();
+              }
+            } else {
+              const nextTr = tr.nextElementSibling;
+              if (nextTr) {
+                const nextInp = nextTr.querySelector('input[data-key="현재재고"]');
+                if (nextInp) nextInp.focus();
+              }
+            }
+          });
+        }
         td.appendChild(input);
         tr.appendChild(td);
       });
@@ -400,7 +434,6 @@
     function getManualTableData() {
       const tbody = document.getElementById('manualTableBody');
       const rows = [];
-      const missingCurrent = [];
       tbody.querySelectorAll('tr').forEach(tr => {
         const inputs = tr.querySelectorAll('input[data-key]');
         const row = {};
@@ -415,17 +448,13 @@
           }
         });
         row['거래처이메일'] = RECIPIENT_EMAIL;
-        const hasName = row['재료명'] !== '';
-        if (!hasName) return;
-        if (row['현재재고'] === null || row['현재재고'] === '' || (typeof row['현재재고'] === 'number' && isNaN(row['현재재고']))) {
-          missingCurrent.push(row['재료명']);
-          return;
-        }
+        if (row['재료명'] === '') return;
+        if (row['현재재고'] === null || row['현재재고'] === '' || (typeof row['현재재고'] === 'number' && isNaN(row['현재재고']))) return;
         row['현재재고'] = Number(row['현재재고']) || 0;
         if (row['현재재고'] < 0) row['현재재고'] = 0;
         rows.push(row);
       });
-      return { rows, missingCurrent };
+      return { rows };
     }
     document.getElementById('btnAddRow').onclick = function() { addManualRow(); };
     document.getElementById('btnLoadSampleIntoTable').onclick = function() {
@@ -434,13 +463,9 @@
       SAMPLE_INVENTORY.forEach(r => addManualRow({ ...r, 현재재고: '' }));
     };
     document.getElementById('btnAnalyzeManual').onclick = function() {
-      const { rows, missingCurrent } = getManualTableData();
-      if (missingCurrent.length > 0) {
-        showMsg('다음 품목의 현재재고를 입력해 주세요: ' + missingCurrent.join(', '), 'error');
-        return;
-      }
+      const { rows } = getManualTableData();
       if (rows.length === 0) {
-        showMsg('최소 1개 품목을 입력해 주세요.', 'error');
+        showMsg('분석할 품목이 없습니다. 현재재고를 입력한 품목만 분석됩니다.', 'error');
         return;
       }
       runWithData(rows, document.getElementById('store_name').value.trim() || '점포');
