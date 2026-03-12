@@ -85,6 +85,9 @@
   <header>
     <h1>도미노피자 재고·발주 자동화</h1>
     <p>재고를 확인하고, 부족 시 발주서를 담당자 이메일로 발송합니다.</p>
+    {% if session.get('authenticated') %}
+      <p style="margin: 0.25rem 0 0;"><a href="{{ url_for('logout') }}" style="color: rgba(255,255,255,0.9); font-size: 0.85rem;">로그아웃</a></p>
+    {% endif %}
   </header>
   <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}

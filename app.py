@@ -15,7 +15,7 @@ except ImportError:
     pass
 import time
 from pathlib import Path
-from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, send_from_directory
+from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, send_from_directory, session
 import pandas as pd
 
 from inventory import (
@@ -29,12 +29,56 @@ from email_service import send_order_email, ORDER_RECIPIENT_EMAIL
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
 
+# 팀 비밀번호 (설정 시 로그인 필수, Vercel 등에서 TEAM_PASSWORD 환경 변수로 설정)
+TEAM_PASSWORD = (os.environ.get("TEAM_PASSWORD") or "").strip()
+
 # 기본 샘플 Excel 경로
 SAMPLE_EXCEL = Path(__file__).parent / "domino_inventory_training.xlsx"
 
 # 분석 결과 임시 저장 (토큰 -> 데이터), 쿠키 크기 제한 회피
 RESULT_STORE = {}
 STORE_TTL_SEC = 3600  # 1시간
+
+
+@app.before_request
+def _require_team_password():
+    """TEAM_PASSWORD가 설정된 경우 로그인하지 않으면 로그인 페이지로."""
+    if not TEAM_PASSWORD:
+        return None
+    if request.endpoint == "login":
+        return None
+    if request.endpoint == "static":
+        return None
+    if session.get("authenticated"):
+        return None
+    # API 요청은 401 반환 (standalone에서 fetch 시)
+    if request.path.startswith("/api/"):
+        return jsonify({"ok": False, "message": "로그인이 필요합니다."}), 401
+    return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """팀 비밀번호 입력 화면. TEAM_PASSWORD가 없으면 사용 안 함."""
+    if not TEAM_PASSWORD:
+        return redirect(url_for("index"))
+    if session.get("authenticated"):
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        password = (request.form.get("password") or "").strip()
+        if password == TEAM_PASSWORD:
+            session["authenticated"] = True
+            next_url = request.args.get("next") or url_for("index")
+            return redirect(next_url)
+        flash("비밀번호가 올바르지 않습니다.", "error")
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    """로그아웃."""
+    session.pop("authenticated", None)
+    return redirect(url_for("login") if TEAM_PASSWORD else url_for("index"))
 
 
 def _get_result_data():

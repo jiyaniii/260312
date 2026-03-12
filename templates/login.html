@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>팀 비밀번호 — 재고·발주 자동화</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f5f0;
+      --card: #fff;
+      --primary: #c41e3a;
+      --primary-dark: #9e1830;
+      --text: #1a1a1a;
+      --text-muted: #555;
+      --border: #e0e0dc;
+      --error: #c41e3a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 2rem;
+      width: 100%;
+      max-width: 360px;
+    }
+    h1 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+    p { margin: 0 0 1rem; color: var(--text-muted); font-size: 0.9rem; }
+    input[type="password"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .btn { display: inline-block; padding: 0.65rem 1.25rem; border: none; border-radius: 8px; font-family: inherit; font-size: 1rem; cursor: pointer; background: var(--primary); color: #fff; width: 100%; }
+    .btn:hover { background: var(--primary-dark); }
+    .flash { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .flash.error { background: #ffebee; color: var(--error); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>팀 프로젝트 비밀번호</h1>
+    <p>접속하려면 비밀번호를 입력하세요.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash {{ category }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <form method="post" action="{{ url_for('login') }}">
+      <input type="password" name="password" placeholder="비밀번호" required autofocus>
+      <button type="submit" class="btn">입장</button>
+    </form>
+  </div>
+</body>
+</html>

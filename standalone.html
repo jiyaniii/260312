@@ -335,7 +335,8 @@
       fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(window._lastOrderData)
+        body: JSON.stringify(window._lastOrderData),
+        credentials: 'same-origin'
       }).then(function(r) { return r.json().then(function(data) { return { status: r.status, data: data }; }); })
         .then(function(res) {
           if (res.data.ok) {
