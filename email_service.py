@@ -15,17 +15,27 @@ from typing import List, Dict, Any, Optional, Tuple
 ORDER_RECIPIENT_EMAIL = "songjy0727@gmail.com"
 
 
+def _normalize_env(value: str) -> str:
+    """환경 변수 값 정리 (Vercel 등에서 줄바꿈·공백·따옴표 제거)."""
+    if not value:
+        return ""
+    s = value.strip().strip('"\'')
+    s = s.replace("\r", "").replace("\n", "").replace(" ", "")
+    return s
+
+
 def _get_smtp_settings():
-    raw_password = os.environ.get("SMTP_PASSWORD", "")
-    # Gmail 앱 비밀번호: 공백 제거, 앞뒤 따옴표 제거
-    password = (raw_password or "").strip().strip('"\'')
-    password = password.replace(" ", "")
+    raw_user = os.environ.get("SMTP_USER", "") or ""
+    raw_password = os.environ.get("SMTP_PASSWORD", "") or ""
+    user = _normalize_env(raw_user)
+    # Gmail 앱 비밀번호는 16자(공백 제거 후)
+    password = _normalize_env(raw_password)
     return {
-        "host": os.environ.get("SMTP_HOST", "smtp.gmail.com").strip(),
-        "port": int(os.environ.get("SMTP_PORT", "587")),
-        "user": os.environ.get("SMTP_USER", "").strip(),
+        "host": (os.environ.get("SMTP_HOST") or "smtp.gmail.com").strip(),
+        "port": int(os.environ.get("SMTP_PORT") or "587"),
+        "user": user,
         "password": password,
-        "use_tls": os.environ.get("SMTP_USE_TLS", "true").lower().strip() == "true",
+        "use_tls": (os.environ.get("SMTP_USE_TLS") or "true").lower().strip() == "true",
     }
 
 
@@ -82,7 +92,7 @@ def send_order_email(
     smtp = _get_smtp_settings()
 
     if not smtp["user"] or not smtp["password"]:
-        return False, "SMTP 설정이 없습니다. .env에 SMTP_USER, SMTP_PASSWORD를 설정하세요."
+        return False, "SMTP 설정이 없습니다. 로컬은 .env, Vercel은 Settings → Environment Variables에 SMTP_USER, SMTP_PASSWORD를 넣어 주세요."
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -103,8 +113,12 @@ def send_order_email(
                 server.login(smtp["user"], smtp["password"])
                 server.sendmail(smtp["user"], recipient, msg.as_string())
         return True, f"발주 이메일이 {recipient} 로 발송되었습니다."
-    except smtplib.SMTPAuthenticationError as e:
-        return False, "이메일 로그인 실패: Gmail 주소와 앱 비밀번호를 확인하세요. (2단계 인증 후 '앱 비밀번호' 사용)"
+    except smtplib.SMTPAuthenticationError:
+        return False, (
+            "이메일 로그인 실패: Gmail 주소와 앱 비밀번호를 확인하세요. "
+            "Google 계정 2단계 인증 후 '앱 비밀번호'(16자)를 생성해 SMTP_PASSWORD에 넣고, "
+            "Vercel이면 Production/Preview 환경 모두에 변수가 설정돼 있는지 확인하세요."
+        )
     except smtplib.SMTPException as e:
         return False, f"SMTP 오류: {str(e)}"
     except Exception as e:
