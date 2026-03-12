@@ -91,10 +91,27 @@
     tr:hover { background: #fafaf8; }
     .status-ok { color: var(--success); }
     .status-warn { color: var(--error); font-weight: 500; }
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
-    .summary-item { background: rgba(0,100,145,0.06); padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid rgba(0,100,145,0.15); }
-    .summary-item .val { font-size: 1.5rem; font-weight: 700; color: var(--dominos-red); }
-    .summary-item .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin: 1rem 0; }
+    @media (max-width: 600px) { .summary-grid { grid-template-columns: 1fr; } }
+    .summary-item {
+      background: #fff;
+      padding: 1.25rem 1rem;
+      border-radius: 12px;
+      text-align: center;
+      border: 2px solid rgba(0,100,145,0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .summary-item .val { font-size: 2rem; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; }
+    .summary-item .label { font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 500; }
+    .summary-item--total .val { color: var(--dominos-blue); }
+    .summary-item--need .val { color: var(--dominos-red); }
+    .summary-item--need { border-color: rgba(227,24,55,0.35); background: rgba(227,24,55,0.04); }
+    .summary-item--qty .val { color: var(--dominos-blue); }
+    .summary-result-title { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+    .supplier-block { background: #fafbfc; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; border-left: 4px solid var(--dominos-blue); box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+    .supplier-block h3 { margin: 0 0 0.75rem; font-size: 1.05rem; color: var(--dominos-blue); font-weight: 700; }
+    .supplier-block table { margin: 0; font-size: 0.9rem; }
+    .action-row { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
   </style>
   {% block extra_css %}{% endblock %}
 </head>

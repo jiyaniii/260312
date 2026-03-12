@@ -75,10 +75,20 @@
     tr:hover { background: #fafaf8; }
     .status-ok { color: var(--success); }
     .status-warn { color: var(--error); font-weight: 500; }
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
-    .summary-item { background: rgba(0,100,145,0.06); padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid rgba(0,100,145,0.15); }
-    .summary-item .val { font-size: 1.5rem; font-weight: 700; color: var(--dominos-red); }
-    .summary-item .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin: 1rem 0; }
+    @media (max-width: 600px) { .summary-grid { grid-template-columns: 1fr; } }
+    .summary-item { background: #fff; padding: 1.25rem 1rem; border-radius: 12px; text-align: center; border: 2px solid rgba(0,100,145,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .summary-item .val { font-size: 2rem; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; }
+    .summary-item .label { font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 500; }
+    .summary-item--total .val { color: var(--dominos-blue); }
+    .summary-item--need .val { color: var(--dominos-red); }
+    .summary-item--need { border-color: rgba(227,24,55,0.35); background: rgba(227,24,55,0.04); }
+    .summary-item--qty .val { color: var(--dominos-blue); }
+    .summary-result-title { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+    .supplier-block { background: #fafbfc; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; border-left: 4px solid var(--dominos-blue); box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+    .supplier-block h3 { margin: 0 0 0.75rem; font-size: 1.05rem; color: var(--dominos-blue); font-weight: 700; }
+    .supplier-block table { margin: 0; font-size: 0.9rem; }
+    .action-row { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
     .hidden { display: none !important; }
     .msg { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
     .msg.error { background: #ffebee; color: var(--error); }
@@ -152,29 +162,32 @@
     </div>
 
     <div id="step2" class="card hidden">
-      <h2>발주 요약 — <span id="storeName"></span></h2>
+      <p class="summary-result-title">발주 요약</p>
+      <h2 style="margin: 0 0 0.25rem;"><span id="storeName"></span></h2>
       <div class="summary-grid">
-        <div class="summary-item">
+        <div class="summary-item summary-item--total">
           <div class="val" id="totalItems">0</div>
           <div class="label">총 품목 수</div>
         </div>
-        <div class="summary-item">
+        <div class="summary-item summary-item--need">
           <div class="val" id="needOrderCount">0</div>
           <div class="label">발주 필요 품목 수</div>
         </div>
-        <div class="summary-item">
+        <div class="summary-item summary-item--qty">
           <div class="val" id="totalQty">0</div>
           <div class="label">전체 권장 발주 수량</div>
         </div>
       </div>
-      <p style="margin: 1rem 0 0;">
-        <button type="button" id="btnSendEmail" class="btn btn-primary hidden">발주서 이메일 보내기 (songjy0727@gmail.com)</button>
-        <span id="emailSendStatus" class="hidden" style="margin-left: 0.5rem;"></span>
-      </p>
-      <p id="noOrderMsg" class="hidden" style="margin: 1rem 0 0; color: var(--text-muted);">현재 재고가 충분하여 발주 필요 품목이 없습니다.</p>
-      <p style="margin: 0.75rem 0 0;">
-        <button type="button" class="btn btn-secondary" id="btnBack">다른 파일로 분석</button>
-      </p>
+      <div class="action-row">
+        <p style="margin: 0 0 0.5rem;">
+          <button type="button" id="btnSendEmail" class="btn btn-primary hidden">발주서 이메일 보내기 (songjy0727@gmail.com)</button>
+          <span id="emailSendStatus" class="hidden" style="margin-left: 0.5rem;"></span>
+        </p>
+        <p id="noOrderMsg" class="hidden" style="margin: 0 0 0.5rem; color: var(--text-muted); font-weight: 500;">✓ 현재 재고가 충분하여 발주 필요 품목이 없습니다.</p>
+        <p style="margin: 0.5rem 0 0;">
+          <button type="button" class="btn btn-secondary" id="btnBack">다른 데이터로 분석</button>
+        </p>
+      </div>
     </div>
 
     <div id="cardSupplier" class="card hidden">
@@ -305,8 +318,8 @@
       supplierList.innerHTML = '';
       bySupplier.forEach(s => {
         const div = document.createElement('div');
-        div.style.marginBottom = '1.5rem';
-        let table = `<h3 style="margin:0 0 0.5rem; font-size:1rem;">${s.거래처명} (리드타임 ${s.리드타임_일}일)</h3><table><thead><tr><th>재료명</th><th>규격</th><th>단위</th><th>발주 권장 수량</th></tr></thead><tbody>`;
+        div.className = 'supplier-block';
+        let table = `<h3>${s.거래처명} · 리드타임 ${s.리드타임_일}일</h3><table><thead><tr><th>재료명</th><th>규격</th><th>단위</th><th>발주 권장 수량</th></tr></thead><tbody>`;
         s.품목_목록.forEach(i => {
           table += `<tr><td>${i.재료명}</td><td>${i.규격}</td><td>${i.단위}</td><td>${i.발주권장수량}</td></tr>`;
         });

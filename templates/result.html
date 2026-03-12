@@ -2,42 +2,45 @@
 {% block title %}분석 결과 — 재고·발주 자동화{% endblock %}
 {% block content %}
   <div class="card">
-    <h2>발주 요약 — {{ store_name }}</h2>
+    <p class="summary-result-title">발주 요약</p>
+    <h2 style="margin: 0 0 0.25rem;">{{ store_name }}</h2>
     <div class="summary-grid">
-      <div class="summary-item">
+      <div class="summary-item summary-item--total">
         <div class="val">{{ summary.총_품목_수 }}</div>
         <div class="label">총 품목 수</div>
       </div>
-      <div class="summary-item">
+      <div class="summary-item summary-item--need">
         <div class="val">{{ summary.발주_필요_품목_수 }}</div>
         <div class="label">발주 필요 품목 수</div>
       </div>
-      <div class="summary-item">
+      <div class="summary-item summary-item--qty">
         <div class="val">{{ summary.전체_권장_발주_수량 }}</div>
         <div class="label">전체 권장 발주 수량</div>
       </div>
     </div>
+    <div class="action-row">
     {% if orders_by_supplier %}
-      <p style="margin: 1rem 0 0;">
+      <p style="margin: 0 0 0.5rem;">
         <form action="{{ url_for('send_email') }}" method="post" style="display: inline;">
           <button type="submit" class="btn btn-primary">발주서 이메일 보내기 ({{ recipient_email }})</button>
         </form>
-        <span style="color: var(--text-muted); font-size: 0.9rem; margin-left: 0.5rem;">→ 버튼을 누르면 자동으로 발송됩니다.</span>
+        <span style="color: var(--text-muted); font-size: 0.9rem; margin-left: 0.5rem;">→ 자동 발송</span>
       </p>
     {% else %}
-      <p style="margin: 1rem 0 0; color: var(--text-muted);">현재 재고가 충분하여 발주 필요 품목이 없습니다.</p>
+      <p style="margin: 0 0 0.5rem; color: var(--text-muted); font-weight: 500;">✓ 현재 재고가 충분하여 발주 필요 품목이 없습니다.</p>
     {% endif %}
-    <p style="margin: 0.75rem 0 0;">
-      <a href="{{ url_for('index') }}" class="btn btn-secondary">다른 파일로 분석</a>
-    </p>
+      <p style="margin: 0.5rem 0 0;">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">다른 데이터로 분석</a>
+      </p>
+    </div>
   </div>
 
   {% if orders_by_supplier %}
   <div class="card">
     <h2>거래처별 발주 내역</h2>
     {% for sup in orders_by_supplier %}
-      <div style="margin-bottom: 1.5rem;">
-        <h3 style="margin: 0 0 0.5rem; font-size: 1rem;">{{ sup.거래처명 }} (리드타임 {{ sup.리드타임_일 }}일)</h3>
+      <div class="supplier-block">
+        <h3>{{ sup.거래처명 }} · 리드타임 {{ sup.리드타임_일 }}일</h3>
         <table>
           <thead>
             <tr>
